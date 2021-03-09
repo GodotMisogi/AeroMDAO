@@ -11,7 +11,7 @@ using TimerOutputs
 #==========================================================================================#
 
 include("Tools/MathTools.jl")
-import .MathTools: tupvector, fwdsum, fwddiv, weighted_vector, vectarray, slope, splitat, adj3, columns, extend_yz, cosine_dist, cosine_interp, structtolist, inverse_rotation, rotation, affine_2D, Point2D, Point3D, x, y, z
+import .MathTools: tupvector, fwdsum, fwddiv, weighted_vector, vectarray, slope, splitat, adj3, columns, extend_yz, reflect_mapper, cosine_dist, cosine_interp, structtolist, inverse_rotation, rotation, affine_2D, Point2D, Point3D, x, y, z
 
 export tupvector
 
@@ -30,7 +30,7 @@ export dynamic_pressure, force_coefficient, moment_coefficient, rate_coefficient
 include("Geometry/PanelGeometry.jl")
 using .PanelGeometry
 
-export Panel, Panel2D, Panel3D, Point2D, collocation_point, point1, point2, point3, point4, transform, panel_normal
+export Panel, Panel2D, Panel3D, Point2D, collocation_point, point1, point2, point3, point4, transform, panel_normal, midpoint, panel_location, panel_tangent
 
 
 ## Wing geometry
@@ -48,7 +48,7 @@ HalfWing, Wing, mean_aerodynamic_chord, span, aspect_ratio, projected_area, tape
 include("VortexLattice/VortexLattice.jl")
 using .VortexLattice
 
-export Horseshoe, Freestream, velocity, streamlines, solve_horseshoes, transform, panel_coords
+export Horseshoe, Freestream, velocity, streamlines, solve_horseshoes, transform, horseshoe_line, horseshoe_point
 
 ## Doublet-source panel method
 #==========================================================================================#

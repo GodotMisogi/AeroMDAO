@@ -3,7 +3,7 @@ using Revise
 using AeroMDAO
 
 ##
-foilpath = "test/CRM.dat"
+foilpath = joinpath((dirname ∘ dirname ∘ pathof)(AeroMDAO), "test/CRM.dat")
 
 ## Foil processing
 coords = read_foil(foilpath)

@@ -4,25 +4,19 @@ using StaticArrays
 using Base.Iterators
 using Base: product
 using Interpolations
-using Zygote
 
 struct Point2D{T <: Real} <: FieldVector{2, T} 
-    x :: T
-    y :: T
+	x :: T
+	y :: T
 end
 
 x(p :: Point2D) = p.x
 y(p :: Point2D) = p.y
 
-zero(::Point2D) = Point2D(0., 0.)
-@Zygote.adjoint x(p::Point2D) = p.p1, x̄ -> (Point2D(x̄, 0.),)
-@Zygote.adjoint y(p::Point2D) = p.p2, ȳ -> (Point2D(0., ȳ),)
-@Zygote.adjoint Point2D(a, b) = Point2D(a, b), p̄ -> (p̄[1], p̄[2])
-
 struct Point3D{T <: Real} <: FieldVector{2, T} 
-    x :: T
-    y :: T
-    z :: T
+	x :: T
+	y :: T
+	z :: T
 end
 
 x(p :: Point3D) = p.x
@@ -43,20 +37,20 @@ splitat(n, xs) = (xs[1:n,:], xs[n+1:end,:])
 lisa(pred, iter) = span(!pred, iter)
 
 struct UnfoldingIterator{T,F}
-    init::T
-    f::F
+	init::T
+	f::F
 end
 
 Base.iterate(uf::UnfoldingIterator) = uf.init, uf.init
 
 function Base.iterate(uf::UnfoldingIterator, state)
-    maybestate = uf.f(state)
-    if maybestate ≡ nothing
-        nothing
-    else
-        state = something(maybestate)
-        state, state
-    end
+	maybestate = uf.f(state)
+	if maybestate ≡ nothing
+		nothing
+	else
+		state = something(maybestate)
+		state, state
+	end
 end
 
 Base.IteratorSize(::Type{<:UnfoldingIterator}) = Base.SizeUnknown()
@@ -105,10 +99,12 @@ vectarray(xs) = SVector.(eachcol(xs)...)
 
 extend_yz(coords) = [ first.(coords) (zeros ∘ length)(coords) last.(coords) ]
 
-## Difference opettions
+reflect_mapper(f, xs) = [ f(xs[:,end:-1:1]) xs ]
+
+## Difference operations
 #===========================================================================#
 
-fwdsum(xs) = @. xs[2:end] .+ xs[1:end-1]
+fwdsum(xs) = @. xs[2:end] + xs[1:end-1]
 fwddiff(xs) = @. xs[2:end] - xs[1:end-1]
 fwddiv(xs) = @. xs[2:end] / xs[1:end-1]
 ord2diff(xs) = @. xs[3:end] - 2 * xs[2:end-1] + xs[1:end-2] 
@@ -118,11 +114,11 @@ adj3(xs) = zip(xs[1:end-2], xs[2:end-1,:], xs[3:end])
 # Central differencing schema for pairs except at the trailing edge
 
 midpair_map(f, xs) = [        f(xs[1], xs[2])     ;
-                       f.(xs[1:end-2], xs[3:end]) ;
-                          f(xs[end-1], xs[end])   ]
+					   f.(xs[1:end-2], xs[3:end]) ;
+						  f(xs[end-1], xs[end])   ]
 
 # stencil(xs, n) = [ xs[n+1:end] xs[1:length(xs) - n] ]
-# parts(xs) = le/t adj = stencil(xs, 1); adj[1,:], adj[end,:] end
+# parts(xs) = let adj = stencil(xs, 1); adj[1,:], adj[end,:] end
 
 # Lazy? versions
 # stencil(xs, n) = zip(xs[n+1:end], xs[1:length(xs) - n])
@@ -131,7 +127,7 @@ midpair_map(f, xs) = [        f(xs[1], xs[2])     ;
 # function midgrad(xs) 
 #     first_two_pairs, last_two_pairs = permutedims.(parts(xs))
 #     central_diff_pairs = stencil(xs, 2)
-    
+	
 #     [first_two_pairs; central_diff_pairs; last_two_pairs]
 # end
 
@@ -145,29 +141,29 @@ Provides the projections to the x-axis for a circle of given diameter and center
 cosine_dist(x_center :: Real, diameter :: Real, n :: Integer = 40) = x_center .+ (diameter / 2) * cos.(range(-π, stop = 0, length = n))
 
 function cosine_interp(coords, n :: Integer = 40)
-    xs, ys = first.(coords)[:], last.(coords)[:]
+	xs, ys = first.(coords)[:], last.(coords)[:]
 
-    d = maximum(xs) - minimum(xs)
-    x_center = (maximum(xs) + minimum(xs)) / 2
-    x_circ = cosine_dist(x_center, d, n)
-    
-    itp_circ = LinearInterpolation(xs, ys)
-    y_circ = itp_circ(x_circ)
+	d = maximum(xs) - minimum(xs)
+	x_center = (maximum(xs) + minimum(xs)) / 2
+	x_circ = cosine_dist(x_center, d, n)
+	
+	itp_circ = LinearInterpolation(xs, ys)
+	y_circ = itp_circ(x_circ)
 
-    SVector.(x_circ, y_circ)
+	SVector.(x_circ, y_circ)
 end
 
 ## Iterator methods
 #===========================================================================#
 
 function accumap(f, n, xs)
-    data = [ xs ]
-    for i = 1:n
-        ys = map(f, xs)
-        data = [ data..., ys ]
-        xs = ys
-    end
-    return hcat(data...)
+	data = [ xs ]
+	for i = 1:n
+		ys = map(f, xs)
+		data = [ data..., ys ]
+		xs = ys
+	end
+	return hcat(data...)
 end
 
 ## Helper functions

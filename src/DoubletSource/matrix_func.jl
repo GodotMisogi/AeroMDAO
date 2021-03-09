@@ -1,81 +1,99 @@
 """
 doublet_matrix(panels_1, panels_2)
 
-Creates the matrix of doublet potential influence coefficients between pairs of panels_1 and panels_2.
+Create the matrix of doublet potential influence coefficients between pairs of panels_1 and panels_2.
 """
-doublet_matrix(panels_1 :: AbstractVector{<: Panel2D}, panels_2 :: AbstractVector{<: Panel2D}) = map(x -> ifelse(x[1] === x[2], 0.5, doublet_influence(x[2], x[1])), Iterators.product(panels_1, panels_2))
-
-"""
-    kutta_condition(panels)
-
-Creates the vector describing Morino's Kutta condition given Panel2Ds.
-"""
-kutta_condition(panels :: AbstractVector{<: Panel2D}) = [ 1; -1; zeros(length(panels) - 4); 1; -1 ]
+doublet_matrix(panels_1 :: Vector{<: Panel2D}, panels_2 :: Vector{<: Panel2D}) = [ ifelse(panel_i === panel_j, 0.5, doublet_influence(panel_j, panel_i)) for panel_i in panels_1, panel_j in panels_2 ]
 
 """
-    wake_vector(wake_panel, panels)
+	kutta_condition(panels)
 
-Creates the vector of doublet potential influence coefficients from the wake on the panels given the wake panel and the array of Panel2Ds.
+Create the vector describing Morino's Kutta condition given Panel2Ds.
 """
-wake_vector(woke_panel :: Panel2D, panels :: AbstractVector{<: Panel2D}) = doublet_influence.(Ref(woke_panel), panels)
-
-
-"""
-    influence_matrix(panels, wake_panel)
-
-Assembles the Aerodynamic Influence Coefficient matrix consisting of the doublet matrix, wake vector, Kutta condition given Panel2Ds and the wake panel.
-"""
-influence_matrix(panels :: AbstractVector{<: Panel2D}, woke_panel :: Panel2D) = 
-    vcat(hcat(doublet_matrix(panels, panels), wake_vector(woke_panel, panels)), hcat(kutta_condition(panels)', 0))
-                            #  0                ]
+kutta_condition(panels :: Vector{<: Panel2D}) = [ 1 -1 zeros(length(panels) - 4)' 1 -1 ]
 
 """
-    source_matrix(panels_1, panels_2)
+	wake_vector(wake_panel, panels)
 
-Creates the matrix of source potential influence coefficients between pairs of panels_1 and panels_2.
+Create the vector of doublet potential influence coefficients from the wake on the panels given the wake panel and the array of Panel2Ds.
 """
-source_matrix(panels_1 :: AbstractVector{<: Panel2D}, panels_2 :: AbstractVector{<: Panel2D}) = [ source_influence(panel_j, panel_i) for panel_i ∈ panels_1, panel_j ∈ panels_2 ]
-
-"""
-    source_strengths(panels, freestream)
-
-Creates the vector of source strengths for the Dirichlet boundary condition ``\\sigma = \\vec U_{\\infty} \\cdot \\hat{n}`` given Panel2Ds and a Uniform2D.
-"""
-source_strengths(panels :: AbstractVector{<: Panel2D}, u) = let u_ref = Ref(u); @. dot(u_ref, panel_normal(panels)) end
+wake_vector(woke_panel :: Panel2D, panels :: Vector{<: Panel2D}) = doublet_influence.(Ref(woke_panel), panels)
 
 """
-    boundary_vector(panels, u)
+	influence_matrix(panels, wake_panel)
 
-Creates the vector for the boundary condition of the problem given an array of Panel2Ds and velocity ``u``.
+Assemble the Aerodynamic Influence Coefficient matrix consisting of the doublet matrix, wake vector, Kutta condition given Panel2Ds and the wake panel.
 """
-boundary_vector(panels :: AbstractVector{<: Panel2D}, u) = [ - source_matrix(panels, panels) * source_strengths(panels, u); 0 ]
+influence_matrix(panels :: Vector{<: Panel2D}, woke_panel :: Panel2D) =
+	[ doublet_matrix(panels, panels)  wake_vector(woke_panel, panels) ;
+		kutta_condition(panels)						0				  ]
+
 
 """
-    solve_strengths(panels, u, bound)
+	source_matrix(panels_1, panels_2)
 
-Solves the matrix system `AIC * φs = boco` given the array of Panel2Ds, a velocity ``u``, and an optional bound for the length of the wake.
+Create the matrix of source potential influence coefficients between pairs of `panels_1` and `panels_2`.
 """
-function solve_strengths(panels :: AbstractVector{<: Panel2D}, u, bound = 1e3) 
-    AIC  = influence_matrix(panels, wake_panel(panels, bound))
-    boco = boundary_vector(panels, u)
+source_matrix(panels_1 :: Vector{<: Panel2D}, panels_2 :: Vector{<: Panel2D}) = [ source_influence(panel_j, panel_i) for panel_i ∈ panels_1, panel_j ∈ panels_2 ]
 
-    AIC \ boco 
+"""
+	source_strengths(panels, freestream)
+
+Create the vector of source strengths for the Dirichlet boundary condition ``\\sigma = \\vec U_{\\infty} \\cdot \\hat{n}`` given Panel2Ds and a Uniform2D.
+"""
+source_strengths(panels :: Vector{<: Panel2D}, u) = dot.(Ref(u), panel_normal.(panels))
+
+"""
+	boundary_vector(panels, u)
+
+Create the vector for the boundary condition of the problem given an array of Panel2Ds and velocity ``u``.
+"""
+boundary_vector(panels :: Vector{<: Panel2D}, u) = [ - source_matrix(panels, panels) * source_strengths(panels, u); 0 ]
+
+boundary_vector(colpoints, u) = [ dot.(colpoints, Ref(u)); 0 ]
+
+function boundary_vector(panels :: Vector{<: Panel2D}, wakes :: Vector{<: Panel2D}, u) 
+	source_panels = [ panels; wakes ]
+	[ - source_matrix(panels, source_panels) * source_strengths(source_panels, u); 0 ]
 end
 
 """
-    lift_coefficient(panels, φs, u)
+	solve_strengths(panels, u, wakes, bound)
 
-Computes the lift coefficient given the array of Panel2Ds, the associated doublet strengths φs, and the velocity ``u``.
+Solve the system of equations ``[AIC][\\phi] = [\\vec{U} \\cdot \\hat{n}] - B[\\sigma]`` condition given the array of Panel2Ds, a velocity ``\\vec U``, a vector of wake `Panel2D`s, and an optional named bound for the length of the wake.
 """
-function lift_coefficient(panels :: AbstractVector{<: Panel2D}, φs, u)
-    speed = norm(u)
-    u_ref = Ref(u)
-    
-    Δφs   = -midpair_map(-, φs[1:end-1])
-    Δrs   = midpair_map(panel_dist, panels)
-    vels  = @. panel_velocity(Δφs, Δrs, u_ref, panel_tangent(panels))
-    cps   = @. pressure_coefficient(speed, vels)
-    cls   = @. lift_coefficient(cps, Δrs / 2, panel_angle(panels))
-    
-    cl    = sum(cls)
+function solve_strengths(panels :: Vector{<: Panel2D}, u, wakes :: Vector{<: Panel2D}; bound = 1e2) 
+	AIC  = influence_matrix(panels, wake_panel(panels, bound))
+	boco = boundary_vector(panels, wakes, u)
+
+	AIC \ boco 
+end
+
+"""
+	solve_strengths(panels, u, sources, bound)
+
+Solve the system of equations ``[AIC][\\phi] = [\\vec{U} \\cdot \\hat{n}] - B[\\sigma]`` condition given the array of Panel2Ds, a velocity ``\\vec U``, a condition whether to disable source terms (``\\sigma = 0``), and an optional named bound for the length of the wake.
+"""
+function solve_strengths(panels :: Vector{<: Panel2D}, u, sources :: Bool; bound = 1e2) 
+	AIC  = influence_matrix(panels, wake_panel(panels, bound))
+	boco = boundary_vector(ifelse(sources, panels, collocation_point.(panels)), u)
+
+	AIC \ boco 
+end
+
+"""
+	lift_coefficient(panels, φs, u, sources :: Bool)
+
+Compute the pressure coefficient and lift coefficient distributions given the array of `Panel2D`s, the associated doublet strengths ``\\phi``s, the velocity ``u``, and a condition whether to disable source terms (``\\sigma = 0``).
+"""
+function aerodynamic_coefficients(panels :: Vector{<: Panel2D}, φs, u, sources :: Bool)
+	speed = norm(u)
+	
+	Δrs   = midpair_map(panel_dist, panels)
+	Δφs   = -midpair_map(-, φs[1:end-1])
+	vels  = ifelse(sources, panel_velocity.(Δφs, Δrs, Ref(u), panel_tangent.(panels)), Δφs ./ Δrs)
+	cps   = @. pressure_coefficient(speed, vels)
+	cls   = @. lift_coefficient(cps, Δrs / 2, panel_angle(panels))
+	
+	cps, cls
 end

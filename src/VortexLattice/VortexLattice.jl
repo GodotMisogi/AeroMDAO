@@ -10,7 +10,7 @@ using TimerOutputs
 
 include("../Tools/MathTools.jl")
 
-using .MathTools: accumap, fwddiff, structtolist, three_quarter_point, quarter_point
+using .MathTools: accumap, fwddiff, structtolist, quarter_point, three_quarter_point
 
 ## Freestream
 #==========================================================================================#
@@ -30,7 +30,7 @@ import ..AeroMDAO: Panel3D, panel_area, panel_coords, midpoint, panel_normal, tr
 
 include("horseshoes.jl")
 
-export Horseshoe
+export Horseshoe, horseshoe_line, horseshoe_point
 
 ## Reference frames
 #==========================================================================================#
@@ -47,44 +47,27 @@ include("influences.jl")
 
 export solve_horseshoes
 
-"""
-Placeholder.
-"""
-make_horseshoes(horseshoe_panels :: AbstractVector{<: Panel3D}) =
-    @. horseshoe_lines(horseshoe_panels), collocation_point(horseshoe_panels)
+make_horseshoes(horseshoe_panels) =	@. horseshoe_line(horseshoe_panels), horseshoe_point(horseshoe_panels)
 
 function solve_system(colpoints, horseshoes, normals, total_vel, U, symmetry)
-    # Allocated versions    
+	AIC = influence_matrix(colpoints, normals, horseshoes, -normalize(U), symmetry)
+	boco = boundary_condition(total_vel, normals)
 
-    @timeit "AIC" AIC = influence_matrix(colpoints, normals, horseshoes, -normalize(U), symmetry)
-    @timeit "RHS" boco = boundary_condition(total_vel, normals)
-    
-    # Pre-allocated version
-    # AIC = zeros(length(colpoints), length(colpoints))
-    # boco = zeros(length(colpoints))
-
-    # @timeit "RHS" boundary_condition!(boco, colpoints, U, Ω, normals)
-    
-    # @timeit "Matrix Assembly (Pre-allocated)" matrix_assembly!(AIC, boco, colpoints, normals, horseshoes, total_vel, -normalize(U))
-
-    @timeit "Solve AIC" AIC \ boco
+	AIC \ boco
 end
 
 """
-    solve_horseshoes(horseshoe_panels, camber_panels, freestream, symmetry) 
+	solve_horseshoes(horseshoe_panels, camber_panels, freestream, symmetry) 
 
-Solves the AIC matrix with the boundary condition given Panel3Ds and a Freestream, with the option to use the symmetry of the problem in the ``x``-``z`` plane.
+Evaluate and return the vortex strengths ``\\Gamma s`` and associated horsehoes given Panel3Ds, their associated normal vectors (not necessarily the same as the panels' normals), and a Freestream, with the option to use the symmetry of the problem in the ``x``-``z`` plane.
 """
-function solve_horseshoes(horseshoe_panels :: AbstractVector{<: Panel3D}, normals, freestream :: Freestream, symmetry = false) 
-    @timeit "Freestream Velocity" U = aircraft_velocity(freestream)
+function solve_horseshoes(horseshoe_panels, normals, freestream :: Freestream, symmetry = false) 
+	U = aircraft_velocity(freestream)
+	horseshoes, colpoints = make_horseshoes(horseshoe_panels)
+	total_vel = [ U + freestream.Ω × colpoint for colpoint in colpoints ]
+	Γs = solve_system(colpoints, horseshoes, normals, total_vel, U, symmetry)
 
-    horseshoes, colpoints = make_horseshoes(horseshoe_panels)
-
-    @timeit "Total Velocity" total_vel = [ U + freestream.Ω × colpoint for colpoint in colpoints ]
-
-    @timeit "Solving..." Γs = solve_system(colpoints, horseshoes, normals, total_vel, U, symmetry)
-
-    Γs, horseshoes
+	Γs, horseshoes
 end
 
 
@@ -104,20 +87,17 @@ export farfield_dynamics
 
 export case_dynamics
 
-function case_dynamics(Γs :: AbstractArray{<: Real}, horseshoes :: AbstractArray{<: Horseshoe}, freestream :: Freestream, r_ref, ρ :: Real, symmetry = false)
-    # Compute near-field dynamics
-    @timeit "Nearfield Dynamics" geom_forces, geom_moments = nearfield_dynamics(Γs[:], horseshoes[:], freestream, r_ref, ρ, symmetry)
-    force, moment = sum(geom_forces), sum(geom_moments)
-    drag = nearfield_drag(force, freestream)
+function case_dynamics(Γs, horseshoes, freestream :: Freestream, r_ref, ρ, symmetry = false)
+	# Compute near-field dynamics
+	trans_forces, trans_moments, trans_rates = nearfield_dynamics(Γs, horseshoes, freestream, r_ref, ρ, symmetry)
 
-    @timeit "Transforming Axes" trans_forces, trans_moments, trans_rates = body_to_wind_axes(force, moment, freestream)
+	# Compute farfield dynamics
+	trefftz_force, trefftz_moment = farfield_dynamics(Γs, horseshoes, freestream, r_ref, ρ, symmetry)
 
-    # Compute farfield dynamics
-    @timeit "Farfield Dynamics" trefftz_force, trefftz_moment = farfield_dynamics(Γs, horseshoes, freestream, r_ref, ρ, symmetry)
-
-    geom_forces, geom_moments, force, moment, drag, trans_rates, trefftz_force, trefftz_moment
+	trans_forces, trans_moments, trans_rates, trefftz_force, trefftz_moment
 end
 
+# Streamlines
 include("streamlines.jl")
 
 export streamlines
