@@ -40,17 +40,17 @@ end
 
 Line(r1 :: FieldVector{3,T}, r2 :: FieldVector{3,T}) where T <: Real = Line{T}(r1, r2)
 
-point1(line :: Line) = line.r1
-point2(line :: Line) = line.r2
-vector(line :: Line) = point2(line) - point1(line)
-center(line :: Line) = (point1(line) + point2(line)) / 2
+r1(line :: Line) = line.r1
+r2(line :: Line) = line.r2
+vector(line :: Line) = r2(line) - r1(line)
+center(line :: Line) = (r1(line) + r2(line)) / 2
 
-points(lines :: Vector{<: Line}) = [ point1.(lines); [(point2 ∘ last)(lines)] ]
+points(lines :: Vector{<: Line}) = [ r1.(lines); [(r2 ∘ last)(lines)] ]
 
-transform(line :: Line, rotation, translation) = let trans = Translation(translation) ∘ LinearMap(rotation); Line((trans ∘ point1)(line), (trans ∘ point2)(line)) end
+transform(line :: Line, rotation, translation) = let trans = Translation(translation) ∘ LinearMap(rotation); Line((trans ∘ r1)(line), (trans ∘ r2)(line)) end
 
-r1(r, line :: Line) = r - point1(line)
-r2(r, line :: Line) = r - point2(line)
+r1(r, line :: Line) = r - r1(line)
+r2(r, line :: Line) = r - r2(line)
 
 bound_leg_velocity(a, b, Γ) = Γ/4π * (1/norm(a) + 1/norm(b)) * a × b / (norm(a) * norm(b) + dot(a, b))
 

@@ -7,14 +7,14 @@ using Rotations
 ## Panel geometry and math tools
 #==========================================================================================#
 
-import ..AeroMDAO: Panel3D, panel_area, panel_coords, midpoint, panel_normal, transform, point1, point2, point3, point4, dynamic_pressure, aerodynamic_coefficients, force_coefficient, moment_coefficient, rate_coefficient, fwddiff, weighted_vector
+import ..AeroMDAO: Panel3D, panel_area, panel_coords, midpoint, panel_normal, transform, p1, p2, p3, p4, dynamic_pressure, aerodynamic_coefficients, force_coefficient, moment_coefficient, rate_coefficient, weighted_vector, reshape_array, cartesian_to_freestream, freestream_to_cartesian
 
 ## Horseshoe setup
 #==========================================================================================#
 
 include("horseshoes.jl")
 
-export Horseshoe, horseshoe_line, horseshoe_point
+export Horseshoe, horseshoe_line, horseshoe_point, bound_leg, bound_leg_center, bound_leg_vector, r1, r2, points, make_horseshoes
 
 ## Reference frames
 #==========================================================================================#
@@ -28,33 +28,24 @@ export body_to_stability_axes, stability_to_body_axes, body_to_wind_axes, wind_t
 
 include("influences.jl")
 
-export solve_horseshoes
+export solve_system
 
 """
     make_horseshoes(horseshoe_panels)
 
-Get the bound legs and collocation points of the horseshoes defined by `Panel3D`s.
+Get the bound legs and collocation points of the horseshoes defined by horseshoe `Panel3D`s.
 """
 make_horseshoes(horseshoe_panels) =	@. horseshoe_line(horseshoe_panels), horseshoe_point(horseshoe_panels)
 
 """
-    solve_horseshoes(horseshoe_panels, normals, U, Ω) 
+    solve_system(horseshoes, collocation_points, normals, U, Ω) 
 
-Evaluate and return the vortex strengths ``\\Gamma``s and associated horsehoes given `Panel3D`s, their associated normal vectors (not necessarily the same as the panels' normals), the speed ``U`` and rotation vector ``\\Omega``.
+Evaluate and return the vortex strengths ``\\Gamma``s given `Horseshoes`, their associated normal vectors (not necessarily the same as the panels' normals), the speed ``U`` and rotation vector ``\\Omega``.
 """
-function solve_horseshoes(horseshoe_panels, normals, U, Ω) 
-    horseshoes, colpoints = make_horseshoes(horseshoe_panels)
-    total_vel = [ U + Ω × colpoint for colpoint in colpoints ]
-    
-    # Solve system
-    Γs = solve_system(colpoints, horseshoes, normals, total_vel, U) 
-
-    Γs, horseshoes
-end
-
-function solve_system(colpoints, horseshoes, normals, total_vel, U)
-    AIC  = influence_matrix(colpoints, normals, horseshoes, -normalize(U))
-    boco = boundary_condition(total_vel, normals)
+function solve_system(horseshoes, collocation_points, normals, U, Ω)
+    V = map(r -> U + Ω × r, collocation_points)
+    AIC  = influence_matrix(horseshoes, collocation_points, normals, -normalize(U))
+    boco = boundary_condition(V, normals)
     Γs 	 = AIC \ boco 
 end
 
@@ -81,12 +72,12 @@ Compute the nearfield and farfield forces over a given component with associated
 """
 function case_dynamics(Γ_comp, hs_comp, Γs, horseshoes, U, α, β, Ω, ρ, r_ref)
     # Compute near-field dynamics
-    geom_forces, geom_moments = nearfield_dynamics(Γ_comp, hs_comp, Γs, horseshoes, U, Ω, ρ, r_ref)
+    surface_forces, surface_moments = nearfield_dynamics(Γ_comp, hs_comp, Γs, horseshoes, U, Ω, ρ, r_ref)
 
     # Compute farfield dynamics
     trefftz_force = trefftz_forces(Γ_comp, hs_comp, norm(U), α, β, ρ)
 
-    geom_forces, geom_moments, trefftz_force
+    surface_forces, surface_moments, trefftz_force
 end
 
 # In case of only one component
@@ -119,5 +110,10 @@ end
 include("streamlines.jl")
 
 export streamlines
+
+# EXPERIMENTAL: SYSTEM
+include("system.jl")
+
+export VLMState, VLMSystem, compute_influence_matrix!, compute_boundary_condition!, compute_collocation_points!, compute_horseshoes!, compute_normals!, solve_system!, compute_nearfield_forces!, compute_farfield_forces!, solve_case!, set_horseshoe_panels!, set_camber_panels!, compute_wake_properties!, normals, horseshoes, collocation_points, AIC, RHS, circulations, surface_force_coefficients, surface_moment_coefficients, total_force_coefficients, farfield_force_coefficients
 
 end

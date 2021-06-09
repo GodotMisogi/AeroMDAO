@@ -8,8 +8,8 @@ Evaluate a doublet-source case given a `Foil` with a `Uniform2D`, with optional 
 """
 function solve_case(foil :: Foil, freestream :: Uniform2D; viscous = false, sources = false, wake_length = 1e5, num_panels :: Integer = 60, wake_panels = 15)
     panels = paneller(foil, num_panels)
-    cls, cms, cps, cl_wake = solve_problem(panels, velocity(freestream), freestream.ang, ifelse(viscous, wake_panels, sources), wake_length)
-    # cdp, cl = sincos(freestream.ang) .* cl_wake
+    cls, cms, cps, cl_wake = solve_problem(panels, velocity(freestream), freestream.angle, ifelse(viscous, wake_panels, sources), wake_length)
+    # cdp, cl = sincos(freestream.angle) .* cl_wake
     # cm      = cl * r_ref
     # coeffs    = (cdp, cl, cm)
 

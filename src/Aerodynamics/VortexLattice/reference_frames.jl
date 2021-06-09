@@ -48,7 +48,7 @@ project_yz(vector) = SVector(0, vector[2], vector[3])
 
 Reflect a Line onto the ``x``-``z`` plane of its reference coordinate system.
 """
-reflect_xz(line :: Line) = Line((reflect_xz ∘ point2)(line), (reflect_xz ∘ point1)(line))
+reflect_xz(line :: Line) = Line((reflect_xz ∘ p2)(line), (reflect_xz ∘ p1)(line))
 
 """
     reflect_yz(horseshoe)
@@ -62,14 +62,14 @@ reflect_xz(horseshoe :: Horseshoe) = (Horseshoe ∘ reflect_xz ∘ bound_leg)(ho
 
 Reflect a Panel3D onto the ``x``-``z`` plane of its reference coordinate system.
 """
-reflect_xz(panel :: Panel3D) = Panel3D((reflect_xz ∘ point1)(panel), (reflect_xz ∘ point2)(panel), (reflect_xz ∘ point3)(panel), (reflect_xz ∘ point4)(panel))
+reflect_xz(panel :: Panel3D) = Panel3D((reflect_xz ∘ p1)(panel), (reflect_xz ∘ p2)(panel), (reflect_xz ∘ p3)(panel), (reflect_xz ∘ p4)(panel))
 
 """
     project_yz(line)
 
 Project a Line onto the ``y``-``z`` plane of its reference coordinate system.
 """
-project_yz(line :: Line) = Line((project_yz ∘ point1)(line), (project_yz ∘ point2)(line))
+project_yz(line :: Line) = Line((project_yz ∘ p1)(line), (project_yz ∘ p2)(line))
 
 """
     stability_flip(vector)

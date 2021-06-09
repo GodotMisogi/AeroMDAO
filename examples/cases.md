@@ -182,7 +182,7 @@ A "viscous" analysis is also supported using traditional wetted-area methods bas
 
 It returns the nearfield and farfield coefficients, the non-dimensionalised force and moment coefficients over the panels, the panels used for the horseshoe elements, the camber panels, the horseshoe elements used for plotting streamlines, and the associated vortex strengths `Γs` corresponding to the solution of the system. The following [example script](vortex_lattice_method/vlm_wing.jl) is provided for reference.
 ```julia
-nf_coeffs, ff_coeffs, CFs, CMs, horseshoe_panels, camber_panels, horseshoes, Γs = 
+nf_coeffs, ff_coeffs, CFs, CMs, horseshoe_panels, normals, horseshoes, Γs = 
     solve_case(wing, freestream; 
                rho_ref   = ρ, 
                r_ref     = r_ref,

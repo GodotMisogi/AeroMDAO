@@ -187,6 +187,6 @@ weighted_vector(x1, x2, μ) = weighted.(x1, x2, μ)
 #             end))
 # end
 
-reshape_array(arr, inds, sizes) = [ reshape(arr[i1+1:i2], size...) for (i1, i2, size) in zip(inds[1:end-1], inds[2:end], sizes) ]
+reshape_array(arr, inds, sizes) = [ reshape(arr[i1+1:i2], size) for (i1, i2, size) in zip(inds[1:end-1], inds[2:end], sizes) ]
 
 end

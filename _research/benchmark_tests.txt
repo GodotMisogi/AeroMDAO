@@ -1,0 +1,84 @@
+VLM.jl Wing -
+
+n_s = 50, n_c = 25
+
+BenchmarkTools.Trial: 
+  memory estimate:  27.74 MiB
+  allocs estimate:  54027
+  --------------
+  minimum time:     256.537 ms (0.00% GC)
+  median time:      270.934 ms (0.00% GC)
+  mean time:        283.178 ms (0.94% GC)
+  maximum time:     338.667 ms (0.00% GC)
+  --------------
+  samples:          18
+  evals/sample:     1
+
+
+AeroMDAO Wing -
+
+n_s = 50, n_c = 25
+
+BenchmarkTools.Trial: 
+  memory estimate:  26.29 MiB
+  allocs estimate:  12681
+  --------------
+  minimum time:     210.452 ms (0.00% GC)
+  median time:      217.163 ms (0.00% GC)
+  mean time:        217.710 ms (1.31% GC)
+  maximum time:     225.881 ms (3.15% GC)
+  --------------
+  samples:          23
+  evals/sample:     1
+
+AeroMDAO Wing Dictionary -
+
+n_s = 50, n_c = 25
+
+BenchmarkTools.Trial: 
+  memory estimate:  30.66 MiB
+  allocs estimate:  65474
+  --------------
+  minimum time:     220.674 ms (0.00% GC)
+  median time:      232.073 ms (2.25% GC)
+  mean time:        240.410 ms (1.70% GC)
+  maximum time:     277.703 ms (2.22% GC)
+  --------------
+  samples:          21
+  evals/sample:     1
+
+VLM.jl Aircraft -
+
+wing - ns = 40, nc = 20
+htail - ns_h = 12, nc_h = 12
+vtail - ns_v = 12, nc_v = 10
+
+BenchmarkTools.Trial:
+  memory estimate:  69.45 MiB
+  allocs estimate:  99812
+  --------------
+  minimum time:     666.975 ms (1.05% GC)
+  median time:      671.694 ms (0.96% GC)
+  mean time:        674.532 ms (0.92% GC)
+  maximum time:     695.370 ms (1.22% GC)
+  --------------
+  samples:          8
+  evals/sample:     1
+
+AeroMDAO Aircraft -
+
+wing = [40], 20
+htail = [12], 12
+vtail = [12], 10
+
+BenchmarkTools.Trial: 
+  memory estimate:  72.67 MiB
+  allocs estimate:  107756
+  --------------
+  minimum time:     492.685 ms (0.38% GC)
+  median time:      525.496 ms (1.53% GC)
+  mean time:        535.727 ms (5.96% GC)
+  maximum time:     613.173 ms (20.87% GC)
+  --------------
+  samples:          10
+  evals/sample:     1

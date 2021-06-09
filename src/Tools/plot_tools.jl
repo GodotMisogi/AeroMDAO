@@ -29,7 +29,7 @@ plot_surface(wing :: Union{HalfWing, Wing}, span_num = 5, chord_num = 30; rotati
 # grid = x_dom × y_dom
 
 # vels, pots = grid_data(dub_src_panels, grid)
-# cp = pressure_coefficient.(uniform.mag, vels);
+# cp = pressure_coefficient.(uniform.magnitude, vels);
 
 # lower_panels, upper_panels = split_panels(dub_src_panels);
 

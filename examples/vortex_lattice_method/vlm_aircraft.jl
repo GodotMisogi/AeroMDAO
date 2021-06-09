@@ -75,7 +75,7 @@ data =
 ## Data collection
 names = (collect ∘ keys)(data) # Gets aircraft component names from analysis
 comp  = names[1]			   # Pick your component
-nf_coeffs, ff_coeffs, CFs, CMs, horseshoe_panels, camber_panels, horseshoes, Γs = data[comp]; #  Get the nearfield, farfield, force and moment coefficients, and other data for post-processing
+nf_coeffs, ff_coeffs, CFs, CMs, horseshoe_panels, normals, horseshoes, Γs = data[comp]; #  Get the nearfield, farfield, force and moment coefficients, and other data for post-processing
 print_coefficients(comp, nf_coeffs, ff_coeffs)
 
 ## Stability case
@@ -121,7 +121,6 @@ streams = plot_streams(fs, seed, horseshoes, Γs, distance, num_stream_points);
 
 ## Plot
 horseshoe_coords = plot_panels(horseshoe_panels[:])
-camber_coords    = plot_panels(camber_panels[:]);
 
 ##
 using Plots
@@ -136,6 +135,6 @@ plot(xaxis = "x", yaxis = "y", zaxis = "z",
      zlim = (-z_limit/2, z_limit/2),
      size = (1280, 720)
     )
-plot!.(camber_coords, color = :black, label = :none)
+plot!.(horseshoe_coords, color = :black, label = :none)
 plot!.(streams, color = :green, label = :none)
 plot!()

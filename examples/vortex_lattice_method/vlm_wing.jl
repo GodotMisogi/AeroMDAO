@@ -21,7 +21,7 @@ V, α, β = 1.0, 1.0, 1.0
 fs      = Freestream(V, α, β, Ω)
 
 ## Evaluate case
-@time nf_coeffs, ff_coeffs, CFs, CMs, horseshoe_panels, camber_panels, horseshoes, Γs = 
+@time nf_coeffs, ff_coeffs, CFs, CMs, horseshoe_panels, normals, horseshoes, Γs = 
 solve_case(wing, fs; 
            rho_ref   = ρ, 
            r_ref     = ref,
@@ -61,7 +61,6 @@ gr(size = (600, 400), dpi = 300)
 
 ## Coordinates
 horseshoe_coords = plot_panels(horseshoe_panels[:])
-camber_coords    = plot_panels(camber_panels[:])
 wing_coords      = plot_wing(wing);
 
 wind_CFs    = body_to_wind_axes.(CFs, α, β) # Transforming body forces to wind axes, needs further checking
@@ -104,8 +103,7 @@ plot(xaxis = "x", yaxis = "y", zaxis = "z",
      camera = (30, 60),
      zlim = (-0.1, z_limit),
      size = (800, 600))
-# plot!.(horseshoe_coords, color = :black, label = :none)
-plot!.(camber_coords, color = :black, label = :none)
+plot!.(horseshoe_coords, color = :black, label = :none)
 scatter!(tupvector(colpoints)[:], marker = 1, color = :black, label = :none)
 plot!.(streams, color = :green, label = :none)
 plot!()

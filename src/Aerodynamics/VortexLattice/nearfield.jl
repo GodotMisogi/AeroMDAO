@@ -11,7 +11,7 @@ Evaluate the induced velocity by the trailing legs at a given location ``r``, by
 """
 midpoint_velocity(r, horseshoes, Γs, U, Ω) = sum(x -> trailing_velocity(r, x[1], x[2], -normalize(U)), zip(horseshoes, Γs)) - U - Ω × r
 
-nearfield_drag(force, U) =  -dot(force, normalize(U))
+nearfield_drag(force, U) = -dot(force, normalize(U))
 horseshoe_moment(horseshoe :: Horseshoe, force, r_ref) = (bound_leg_center(horseshoe) - r_ref) × force
 moments(horseshoes, forces, r_ref) = horseshoe_moment.(horseshoes, forces, Ref(r_ref))
 
