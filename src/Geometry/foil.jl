@@ -117,16 +117,15 @@ bernstein_basis(x, n, k) = binomial(n, k) * bernstein_class(x, k, n - k)
 
 Define a cosine-spaced airfoil with ``2n`` points using the Class Shape Transformation method on a Bernstein polynomial basis with arrays of coefficients ``(\\alpha_u,~ \\alpha_l)`` for the upper and lower surfaces, trailing-edge spacing values ``(\\Delta z_u,~ \\Delta z_l)``, and support for leading edge modifications.
 """
-function kulfan_CST(alpha_u, alpha_l, (dz_u, dz_l), coeff_LE = 0, n :: Integer = 40, N1 = 0.5, N2 = 1.)
+function kulfan_CST(alpha_u, alpha_l, (dz_u, dz_l), (LE_u, LE_l) = (0., 0.), n :: Integer = 40, N1 = 0.5, N2 = 1.)
     # Cosine spacing for airfoil of unit chord length
     xs = cosine_dist(0.5, 1, n)
 
     # λ-function for Bernstein polynomials
-    bernie(x, alphas, dz) = cst_coords(y -> bernstein_class(y, N1, N2), bernstein_basis, x, alphas, dz, coeff_LE)
-
+    bernie(x, alphas, dz, LE) = cst_coords(y -> bernstein_class(y, N1, N2), bernstein_basis, x, alphas, dz, LE)
     # Upper and lower surface generation
-    upper_surf = [ bernie(x, alpha_u, dz_u) for x ∈ xs ]
-    lower_surf = [ bernie(x, alpha_l, dz_l) for x ∈ xs ]
+    upper_surf = [ bernie(x, alpha_u, dz_u, LE_u) for x ∈ xs ]
+    lower_surf = [ bernie(x, alpha_l, dz_l, LE_l) for x ∈ xs ]
 
     # Counter-clockwise ordering
     coords = [ SVector.(xs, upper_surf)[end:-1:2] ; 
