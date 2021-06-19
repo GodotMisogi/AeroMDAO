@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.14.3
+# v0.14.8
 
 using Markdown
 using InteractiveUtils
@@ -162,18 +162,15 @@ md"### Assembly"
 
 # ╔═╡ add8b8d0-8253-11eb-0cdc-8f1e28af9e2c
 begin
-	wing_panels  = 	panel_wing(wing, [12], 6;
-							   position = wing_pos
-							  )
-	htail_panels =	panel_wing(htail, [8], 4;
+	wing_panels  = 	panel_wing(wing, 12, 6;
+							   position = wing_pos)
+	htail_panels =	panel_wing(htail, 8, 4;
 							   position	= htail_pos,
 							   angle 	= deg2rad(α_h_i),
-							   axis 	= [0., 1., 0.]
-							  )
-	vtail_panels = 	panel_wing(vtail, [8], 4;
+							   axis 	= [0., 1., 0.])
+	vtail_panels = 	panel_wing(vtail, 8, 4;
 							   position = vtail_pos,
-							   angle    = π/2
-							  )
+							   angle    = π/2)
 end;
 
 # ╔═╡ b79f2b23-1340-4e58-8adb-d3dd65fbc2c7
@@ -185,20 +182,20 @@ aircraft = Dict("Wing" 			  	=> wing_panels,
 begin
 	ρ 			= 1.225
 	ref 		= x_w
-	V, α, β 	= 10.0, 2.0, 0.0
+	V, α, β 	= 10.0, 5.0, 0.0
 	Ω 			= [0.0, 0.0, 0.0]
-	freestream 	= Freestream(V, α, β, Ω)
+	fs 			= Freestream(V, α, β, Ω)
 end;
 
 # ╔═╡ 66adab50-82f8-11eb-0603-f3a50a03c3b4
 data = solve_case(aircraft, 
-				   freestream; 
-				   rho_ref     = ρ, 
-				   r_ref       = ref, 
-				   area_ref    = S, 
-				   span_ref    = b, 
-				   chord_ref   = c, 
-				   name        = "My Aircraft"
+				  fs; 
+				  rho_ref     = ρ, 
+				  r_ref       = ref, 
+				  area_ref    = S, 
+				  span_ref    = b, 
+				  chord_ref   = c, 
+				  name        = "My Aircraft"
 				  );
 
 # ╔═╡ 5b1ac8a0-8301-11eb-0e9f-7b4b8bb2b0bd
@@ -211,7 +208,7 @@ comp = names[2]
 nf_coeffs, ff_coeffs, CFs, CMs, horseshoe_panels, camber_panels, horseshoes, Γs = data[comp];
 
 # ╔═╡ ab566bc0-82f8-11eb-2b30-b9d62de30027
-HTML(print_coefficients(comp, nf_coeffs, ff_coeffs, browser = true))
+HTML(print_coefficients(nf_coeffs, ff_coeffs, comp; browser = true))
 
 # ╔═╡ c0d4b620-82fb-11eb-3735-935581c41b80
 begin
@@ -233,12 +230,6 @@ end
 # ╔═╡ 35f40af0-8315-11eb-2821-efd5d319ffcb
 gr(dpi = 300)
 
-# ╔═╡ af888bb0-8253-11eb-2dd5-5d0739fd1f15
-begin
-	horseshoe_coords = plot_panels(horseshoe_panels[:])
-	camber_coords    = plot_panels(camber_panels[:])
-end;
-
 # ╔═╡ e2fe51e0-8312-11eb-38e0-0d996d94ced1
 md"## Trefftz Plane"
 
@@ -246,24 +237,35 @@ md"## Trefftz Plane"
 sum(CFs)
 
 # ╔═╡ 19387ec0-834f-11eb-347f-69385fa70bd3
-function trefftz_plane_forces(horseshoe_panels, CFs, ρ, V, α, β)
-	# qs = 0.5 * ρ * V^2 * panel_area.(horseshoe_panels)
-	trans_CFs = body_to_wind_axes.(CFs, deg2rad(α), deg2rad(β))
-	sec_ys = getindex.(midpoint.(horseshoe_panels[1,:]), 2)
-	CDis = sum(getindex.(trans_CFs, 1), dims = 1)[:]
-	CYs	 = sum(getindex.(trans_CFs, 2), dims = 1)[:]
-	CLs  = sum(getindex.(trans_CFs, 3), dims = 1)[:]
+function trefftz_plane_forces(horseshoe_panels, CFs, ρ, V, S, α, β)
+	colpoints        = horseshoe_point.(horseshoe_panels)
+	sec_ys = getindex.(colpoints, 2)[1,:];
 	
-	sec_ys, CLs, CDis, CYs
+	wind_CFs = body_to_wind_axes.(CFs, α, β)
+	CDis     = @. getindex(wind_CFs, 1)
+	CYs	     = @. getindex(wind_CFs, 2)
+	CLs      = @. getindex(wind_CFs, 3)
+
+	area_scale  = S ./ sum(panel_area, horseshoe_panels, dims = 1)[:]
+	span_CDis   = sum(CDis, dims = 1)[:] .* area_scale
+	span_CYs    = sum(CYs,  dims = 1)[:] .* area_scale
+	span_CLs    = sum(CLs,  dims = 1)[:] .* area_scale
+	
+	sec_ys, span_CLs, span_CDis, span_CYs
 end
 
 # ╔═╡ e845a360-8312-11eb-1551-b3e2ecf7cbd2
 begin
-	sec_ys, CLs, CDis, CYs = trefftz_plane_forces(horseshoe_panels, CFs, ρ, V, α, β)
-	plot1 = plot(sec_ys, CDis, marker = :dot, label = nothing, ylabel = "CDi")
-	plot2 = plot(sec_ys, CYs, marker = :dot, label = nothing, ylabel = "CY")
-	plot3 = plot(sec_ys, 2sum(Γs, dims = 1)[:] / (V * c), marker = :dot, label = nothing, xlabel = "y", ylabel = "CL Loading")
-	plot(plot1, plot2, plot3, layout = (3, 1))
+	ys, span_CLs, span_CDis, span_CYs = trefftz_plane_forces(horseshoe_panels, CFs, ρ, V, S, fs.alpha, fs.beta)
+	CL_loadings = sum(Γs,   dims = 1)[:] / (0.5 * fs.V * c)
+	
+	plot_CD = plot(ys, span_CDis, label = :none, ylabel = "CDi")
+	plot_CY = plot(ys, span_CYs, label = :none, ylabel = "CY")
+	plot_CL = begin
+				plot(ys, span_CLs, label = :none, xlabel = "y", ylabel = "CL")
+				plot!(ys, CL_loadings, label = "Normalized", xlabel = "y")
+			  end
+	plot(plot_CD, plot_CY, plot_CL, layout = (3, 1))
 	plot!()
 end
 
@@ -286,17 +288,17 @@ md"Seed 2"
 
 # ╔═╡ af01f690-8253-11eb-232e-bb504f4c3535
 begin
-	span_points = 50
-	init        = leading_chopper(ifelse(β == 0 && Ω == zeros(3), wing.right, wing), span_points)
+	span_points = 20
+	init        = chop_leading_edge(wing, span_points)
 	dx, dy, dz  = 0, 0, 1e-3
 	seed_2        = [ init .+ Ref([dx, dy, dz])  ; 
 					  init .+ Ref([dx, dy, -dz]) ];
-	distance = 5
+	distance = 8
 	num_stream_points = 200
 end;
 
 # ╔═╡ f1e63450-82fb-11eb-305d-9bec0e0cd50a
-streams = ifelse(stream, plot_streams(freestream, seed_2, horseshoes, Γs, distance, num_stream_points), nothing)
+streams = ifelse(stream, plot_streams(fs, seed_2, horseshoes, Γs, distance, num_stream_points), nothing)
 
 # ╔═╡ b04f5e20-8253-11eb-1263-934f17649375
 begin
@@ -306,7 +308,8 @@ begin
 			 camera = (φ, ψ),
 			 zlim = (-0.1, z_limit),
 			 )
-		plot!.(camber_coords, color = :black, label = :none)
+		horseshoe_coords = plot_panels(horseshoe_panels[:])
+		plot!.(horseshoe_coords, color = :black, label = :none)
 		if stream
 			plot!.(streams, color = :green, label = :none)
 		end
@@ -363,7 +366,6 @@ main {
 # ╟─c0d4b620-82fb-11eb-3735-935581c41b80
 # ╠═35f40af0-8315-11eb-2821-efd5d319ffcb
 # ╠═b04f5e20-8253-11eb-1263-934f17649375
-# ╠═af888bb0-8253-11eb-2dd5-5d0739fd1f15
 # ╟─e2fe51e0-8312-11eb-38e0-0d996d94ced1
 # ╠═e845a360-8312-11eb-1551-b3e2ecf7cbd2
 # ╠═fdd49a2c-5c03-4d2a-9910-7aa3f4a88fc4
